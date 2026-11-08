@@ -1,7 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Roshetta.API.Models
 {
+    [Index(nameof(DoctorId), nameof(Day), IsUnique = true)]
     public class WorkingDay
     {
         public Guid Id { get; set; }
