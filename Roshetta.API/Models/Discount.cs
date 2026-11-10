@@ -14,6 +14,5 @@ namespace Roshetta.API.Models
         [Precision(18, 2)]
         public decimal DiscountValue { get; set; }
         public bool IsActive { get; set; }
-        public virtual List<Booking> Bookings { get; set; } = new();
     }
 }
