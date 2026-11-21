@@ -14,5 +14,7 @@ namespace Roshetta.API.Models
         [MaxLength(300)]
         public string? Image { get; set; }
         public Doctor? Doctor { get; set; } // Navigation property to Doctor // One-to-One relationship with Doctor
+        public string? RefreshToken { get; set; } // Property to store the refresh token
+        public DateTime? RefreshTokenExpiryTime { get; set; } // Property to store the refresh token expiry time
     }
 }

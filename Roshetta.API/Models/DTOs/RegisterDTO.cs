@@ -11,6 +11,5 @@ namespace Roshetta.API.Models.DTOs
         public string PhoneNumber { get; set; } = string.Empty;
         public Gender Gender { get; set; }
         public DateOnly? DateOfBirth { get; set; }
-        public string? Image { get; set; }
     }
 }

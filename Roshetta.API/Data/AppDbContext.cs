@@ -33,6 +33,9 @@ namespace Roshetta.API.Data
             {
                 fk.DeleteBehavior = DeleteBehavior.Restrict;         // 4
             }
+
+            builder.Entity<ApplicationUser>()
+                .HasIndex(u => u.RefreshToken);
         }
 
         public DbSet<Doctor> Doctors { get; set; }

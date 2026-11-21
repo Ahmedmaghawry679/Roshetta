@@ -216,6 +216,12 @@ namespace Roshetta.API.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("RefreshToken")
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("RefreshTokenExpiryTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -235,6 +241,8 @@ namespace Roshetta.API.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
+
+                    b.HasIndex("RefreshToken");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -283,7 +291,7 @@ namespace Roshetta.API.Migrations
 
                     b.HasIndex("PatientId");
 
-                    b.ToTable("Bookings", (string)null);
+                    b.ToTable("Bookings");
                 });
 
             modelBuilder.Entity("Roshetta.API.Models.DaySlot", b =>
@@ -303,7 +311,7 @@ namespace Roshetta.API.Migrations
                     b.HasIndex("WorkingDayId", "StartTime")
                         .IsUnique();
 
-                    b.ToTable("DaySlots", (string)null);
+                    b.ToTable("DaySlots");
                 });
 
             modelBuilder.Entity("Roshetta.API.Models.Discount", b =>
@@ -335,7 +343,7 @@ namespace Roshetta.API.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("Discounts", (string)null);
+                    b.ToTable("Discounts");
                 });
 
             modelBuilder.Entity("Roshetta.API.Models.Doctor", b =>
@@ -361,7 +369,7 @@ namespace Roshetta.API.Migrations
                     b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("Doctors", (string)null);
+                    b.ToTable("Doctors");
                 });
 
             modelBuilder.Entity("Roshetta.API.Models.Specialization", b =>
@@ -380,7 +388,7 @@ namespace Roshetta.API.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("Specializations", (string)null);
+                    b.ToTable("Specializations");
                 });
 
             modelBuilder.Entity("Roshetta.API.Models.WorkingDay", b =>
@@ -400,7 +408,7 @@ namespace Roshetta.API.Migrations
                     b.HasIndex("DoctorId", "Day")
                         .IsUnique();
 
-                    b.ToTable("WorkingDays", (string)null);
+                    b.ToTable("WorkingDays");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -463,18 +471,18 @@ namespace Roshetta.API.Migrations
                         .IsRequired();
 
                     b.HasOne("Roshetta.API.Models.Discount", "Discount")
-                        .WithMany("Bookings")
+                        .WithMany()
                         .HasForeignKey("DiscountId")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Roshetta.API.Models.Doctor", "Doctor")
-                        .WithMany("Bookings")
+                        .WithMany()
                         .HasForeignKey("DoctorId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Roshetta.API.Models.ApplicationUser", "Patient")
-                        .WithMany("Bookings")
+                        .WithMany()
                         .HasForeignKey("PatientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
@@ -520,19 +528,15 @@ namespace Roshetta.API.Migrations
 
             modelBuilder.Entity("Roshetta.API.Models.WorkingDay", b =>
                 {
-                    b.HasOne("Roshetta.API.Models.Doctor", "Doctor")
+                    b.HasOne("Roshetta.API.Models.Doctor", null)
                         .WithMany("WorkingDays")
                         .HasForeignKey("DoctorId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Doctor");
                 });
 
             modelBuilder.Entity("Roshetta.API.Models.ApplicationUser", b =>
                 {
-                    b.Navigation("Bookings");
-
                     b.Navigation("Doctor");
                 });
 
@@ -541,15 +545,8 @@ namespace Roshetta.API.Migrations
                     b.Navigation("Bookings");
                 });
 
-            modelBuilder.Entity("Roshetta.API.Models.Discount", b =>
-                {
-                    b.Navigation("Bookings");
-                });
-
             modelBuilder.Entity("Roshetta.API.Models.Doctor", b =>
                 {
-                    b.Navigation("Bookings");
-
                     b.Navigation("WorkingDays");
                 });
 

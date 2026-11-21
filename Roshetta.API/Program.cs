@@ -1,8 +1,11 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Roshetta.API.Data;
 using Roshetta.API.Middlewares;
 using Roshetta.API.Models;
@@ -10,6 +13,7 @@ using Roshetta.API.Models.Validators;
 using Roshetta.API.Services;
 using Serilog;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
+using System.Text;
 using System.Threading.RateLimiting;
 
 namespace Roshetta.API
@@ -19,13 +23,8 @@ namespace Roshetta.API
         public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
-                .Enrich.FromLogContext()
                 .WriteTo.Console()
-                .WriteTo.File("logs/roshetta-.log", rollingInterval: RollingInterval.Day, retainedFileCountLimit: 14)
                 .CreateBootstrapLogger();
-
             try
             {
                 var builder = WebApplication.CreateBuilder(args);
@@ -33,20 +32,28 @@ namespace Roshetta.API
                 // Connect Serilog to ASP.NET Core logging
                 builder.Host.UseSerilog((context, services, config) => config
                     .ReadFrom.Configuration(context.Configuration)
-                    .ReadFrom.Services(services)
-                    .Enrich.FromLogContext()
-                    .WriteTo.Console()
-                    .WriteTo.File(
-                        Path.Combine(AppContext.BaseDirectory, "logs", "roshetta-.log"),
-                        rollingInterval: RollingInterval.Day,
-                        retainedFileCountLimit: 14));
+                    .ReadFrom.Services(services));
 
                 // Add services to the container.
 
                 builder.Services.AddControllers();
 
                 builder.Services.AddEndpointsApiExplorer();
-                builder.Services.AddSwaggerGen();
+                builder.Services.AddSwaggerGen(c =>
+                {
+                    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                    {
+                        Type = SecuritySchemeType.Http,
+                        Scheme = "bearer",
+                        BearerFormat = "JWT",
+                        Description = "Paste the access token only (no 'Bearer ' prefix)."
+                    });
+
+                    c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+                    {
+                        [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+                    });
+                });
 
                 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
                 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -58,6 +65,26 @@ namespace Roshetta.API
                 })
                     .AddEntityFrameworkStores<AppDbContext>()
                     .AddDefaultTokenProviders();
+
+                builder.Services.AddAuthentication(options =>
+                {
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                    .AddJwtBearer(options =>
+                    {
+                        options.TokenValidationParameters = new TokenValidationParameters
+                        {
+                            ValidateIssuer = true,
+                            ValidateAudience = true,
+                            ValidateLifetime = true,
+                            ValidateIssuerSigningKey = true,
+                            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+                            ValidAudience = builder.Configuration["Jwt:Audience"],
+                            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("JWT Key not found in configuration.")))
+                        };
+                    });
 
                 // Fluent Validation For Register DTO
                 builder.Services.AddValidatorsFromAssemblyContaining<RegisterValidator>();
@@ -119,7 +146,7 @@ namespace Roshetta.API
                 }
 
                 app.UseExceptionHandler();        // makes GlobalExceptionHandler actually run
-                app.UseSerilogRequestLogging();
+                app.UseSerilogRequestLogging();   
 
                 // Configure the HTTP request pipeline.
                 if (app.Environment.IsDevelopment())
@@ -129,16 +156,17 @@ namespace Roshetta.API
                 }
 
                 app.UseHttpsRedirection();
+                app.UseRateLimiter(); // Rate Limiting Middleware   
 
+                app.UseAuthentication(); // Authentication Middleware
                 app.UseAuthorization();
 
-                app.UseRateLimiter(); // Rate Limiting Middleware   
 
                 app.MapControllers();
 
                 app.Run();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not HostAbortedException) // The catch-all try/catch will log a fatal error every time you run Add-Migration. EF’s tooling stops the host on purpose by throwing HostAbortedException
             {
                 Log.Fatal(ex, "Application terminated unexpectedly");
             }

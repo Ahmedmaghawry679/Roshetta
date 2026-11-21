@@ -9,7 +9,7 @@ namespace Roshetta.API.Controllers.Helpers
             => result.IsSuccess? new OkResult():MapError(result.ErrorType, result.Errors);
 
         // Result<T> (with data)
-        public static ActionResult ToActionResult<T>(this Result<T> result)
+        public static IActionResult ToActionResult<T>(this Result<T> result)
             => result.IsSuccess? new OkObjectResult(result.Data) : MapError(result.ErrorType, result.Errors);
 
         private static ObjectResult MapError(ErrorType? errorType, IEnumerable<string> errors)
