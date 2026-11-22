@@ -10,6 +10,7 @@ using Roshetta.API.Data;
 using Roshetta.API.Middlewares;
 using Roshetta.API.Models;
 using Roshetta.API.Models.Validators;
+using Roshetta.API.Repositories;
 using Roshetta.API.Services;
 using Serilog;
 using SharpGrip.FluentValidation.AutoValidation.Mvc.Extensions;
@@ -136,6 +137,10 @@ namespace Roshetta.API
                     };
 
                 });
+
+                builder.Services.AddScoped<IDoctorRepository, DoctorRepository>();  
+                builder.Services.AddScoped<IDoctorService, DoctorService>();
+                builder.Services.AddScoped<ISpecializationRepository, SpecializationRepository>();
 
                 var app = builder.Build();
 
