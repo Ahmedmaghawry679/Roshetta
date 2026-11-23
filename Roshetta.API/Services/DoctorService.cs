@@ -28,7 +28,7 @@ namespace Roshetta.API.Services
             this.context = context;
             this.userManager = userManager;
         }
-        public async Task<Result<DoctorCreateResponse>> AddDoctorAsync(DoctorDTO dto, Guid adminId)
+        public async Task<Result<DoctorCreateResponse>> AddDoctorAsync(RegisterDoctorDTO dto, Guid adminId)
         {
             var email = dto.Email.Trim();
 
@@ -116,6 +116,39 @@ namespace Roshetta.API.Services
             }
 
         }
+        public async Task<PagedList<DoctorDTO>> GetAllDoctorsAsync(DoctorQueryParameters parameters)
+        {
+            var pageNumber = Math.Max(parameters.PageNumber, 1);
+            var pageSize = Math.Clamp(parameters.PageSize, 1, 50);
+
+            parameters.PageNumber = pageNumber;
+            parameters.PageSize = pageSize;
+
+            return await doctorRepository.GetPagedAsync(parameters);
+
+        }
+        public async Task<Result<DoctorDTO?>> GetDoctorByIdAsync(Guid doctorId)
+        {
+            var doctor = await doctorRepository.GetByIdAsync(doctorId);
+            if (doctor is null)
+            {
+                logger.LogWarning("Doctor with ID {DoctorId} not found.", doctorId);
+                return Result<DoctorDTO?>.Failure(["Doctor not found."], ErrorType.NotFound);
+            }
+
+            return Result<DoctorDTO?>.Success(new DoctorDTO
+            {
+                Id = doctor.Id,
+                FirstName = doctor.User.FirstName,
+                LastName = doctor.User.LastName,
+                Email = doctor.User.Email??string.Empty,
+                PhoneNumber = doctor.User.PhoneNumber??string.Empty,
+                Gender = doctor.User.Gender.ToString(),
+                DateOfBirth = doctor.User.DateOfBirth,
+                Specialization = doctor.Specialization.Name,
+                Price = doctor.Price
+            };
+        }
 
         private static string GenerateTemporaryPassword()
         {
@@ -132,5 +165,41 @@ namespace Roshetta.API.Services
         }
         private static char Pick(string s) => s[RandomNumberGenerator.GetInt32(s.Length)];
 
+        public async Task<Result<string>> DeleteDoctorAsync(Guid doctorId)
+        {
+            var doctor = await doctorRepository.GetByIdAsync(doctorId);
+
+            if (doctor is null)
+            {
+                logger.LogWarning("Doctor with ID {DoctorId} not found for deletion.", doctorId);
+                return Result<string>.Failure(["Doctor not found."], ErrorType.NotFound);
+            }
+
+            if (await doctorRepository.HasBookingsAsync(doctorId))
+            {
+                logger.LogWarning("Doctor with ID {DoctorId} has existing bookings and cannot be deleted.", doctorId);
+                return Result<string>.Failure(["Doctor has existing pending bookings."], ErrorType.Conflict);
+            }
+
+            await doctorRepository.DeleteAsync(doctorId);
+            
+
+            try
+            {
+                var result = await userManager.DeleteAsync(doctor.User);
+                if (!result.Succeeded) 
+                {
+                    logger.LogWarning("Doctor with ID {DoctorId} cannot be deleted.", doctorId);
+                    return Result<string>.Failure(["Doctor with ID {DoctorId}cannot be deleted."], ErrorType.Unexpected);
+                }
+                logger.LogInformation("Doctor with ID {DoctorId} deleted successfully.", doctorId);
+                return Result<string>.Success("Doctor deleted successfully.");
+            }
+            catch (DbUpdateException)
+            {
+                // a booking was created between the check and the delete
+                return Result<string>.Failure(["Doctor has existing bookings."], ErrorType.Conflict);
+            }
+        }
     }
 }

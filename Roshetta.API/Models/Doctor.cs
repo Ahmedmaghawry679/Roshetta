@@ -17,5 +17,6 @@ namespace Roshetta.API.Models
         [Precision(18, 2)]
         public decimal Price { get; set; }
         public virtual List<WorkingDay> WorkingDays { get; set; } = new(); // Navigation property to WorkingDay
+        public virtual List<Booking> Bookings { get; set; } = new(); // Navigation property to Booking
     }
 }

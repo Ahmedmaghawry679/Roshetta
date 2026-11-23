@@ -4,6 +4,9 @@ namespace Roshetta.API.Services
 {
     public interface IDoctorService
     {
-        Task<Result<DoctorCreateResponse>> AddDoctorAsync(DoctorDTO dto, Guid adminId);
+        Task<Result<DoctorCreateResponse>> AddDoctorAsync(RegisterDoctorDTO dto, Guid adminId);
+        Task<PagedList<DoctorDTO>> GetAllDoctorsAsync(DoctorQueryParameters parameters);
+        Task<Result<DoctorDTO?>> GetDoctorByIdAsync(Guid doctorId);
+        Task<Result<string>> DeleteDoctorAsync(Guid doctorId);
     }
 }

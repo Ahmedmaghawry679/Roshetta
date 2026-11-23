@@ -1,4 +1,5 @@
 ﻿using Roshetta.API.Models;
+using Roshetta.API.Models.DTOs;
 
 namespace Roshetta.API.Repositories
 {
@@ -7,11 +8,11 @@ namespace Roshetta.API.Repositories
         Task AddAsync(Doctor doctor); 
         Task UpdateAsync(Doctor doctor);
         Task DeleteAsync(Guid id);
-        Task<Doctor> GetByIdAsync(Guid id);
+        Task<Doctor?> GetByIdAsync(Guid id);
         Task<IEnumerable<Doctor>> GetAllAsync();
+        Task<PagedList<DoctorDTO>> GetPagedAsync(DoctorQueryParameters parameters);
         Task<IEnumerable<Doctor>> GetBySpecializationAsync(Guid specializationId);
-        Task<Doctor> GetByEmailAsync(string email);
-        Task<Doctor> GetByPhoneAsync(string phone);
+        Task<bool> HasBookingsAsync(Guid doctorId);
 
     }
 }

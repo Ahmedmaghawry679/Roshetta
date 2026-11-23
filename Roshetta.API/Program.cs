@@ -141,6 +141,7 @@ namespace Roshetta.API
                 builder.Services.AddScoped<IDoctorRepository, DoctorRepository>();  
                 builder.Services.AddScoped<IDoctorService, DoctorService>();
                 builder.Services.AddScoped<ISpecializationRepository, SpecializationRepository>();
+                builder.Services.AddScoped<ISpecializationService, SpecializationService>();
 
                 var app = builder.Build();
 

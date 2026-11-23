@@ -3,7 +3,7 @@ using Roshetta.API.Models.DTOs;
 
 namespace Roshetta.API.Models.Validators
 {
-    public class DoctorValidator: AbstractValidator<DoctorDTO>
+    public class DoctorValidator: AbstractValidator<RegisterDoctorDTO>
     {
         public DoctorValidator()
         {
