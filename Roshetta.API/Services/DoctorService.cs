@@ -28,7 +28,7 @@ namespace Roshetta.API.Services
             this.context = context;
             this.userManager = userManager;
         }
-        public async Task<Result<DoctorCreateResponse>> AddDoctorAsync(RegisterDoctorDTO dto, Guid adminId)
+        public async Task<Result<CreateDoctorResponse>> AddDoctorAsync(RegisterDoctorDTO dto, Guid adminId)
         {
             var email = dto.Email.Trim();
 
@@ -36,21 +36,21 @@ namespace Roshetta.API.Services
             if(!specializationExists)
             {
                 logger.LogWarning("Specialization with ID {SpecializationId} does not exist.", dto.SpecializationId);
-                return Result<DoctorCreateResponse>.Failure(["Specialization does not exist." ], ErrorType.Validation);
+                return Result<CreateDoctorResponse>.Failure(["Specialization does not exist." ], ErrorType.Validation);
             }
 
             var emailExists = await userManager.FindByEmailAsync(email);
             if(emailExists is not null)
             {
                 logger.LogWarning("Doctor Registration rejected: User with this email already exists.");
-                return Result<DoctorCreateResponse>.Failure(["User with this email already exists." ], ErrorType.Conflict);
+                return Result<CreateDoctorResponse>.Failure(["User with this email already exists." ], ErrorType.Conflict);
             }
 
             var phoneExists = await userManager.Users.AnyAsync(u => u.PhoneNumber == dto.PhoneNumber);
             if (phoneExists)
             {
                 logger.LogWarning("Doctor Registration rejected: User with this phone number already exists.");
-                return Result<DoctorCreateResponse>.Failure(["User with this phone number already exists."], ErrorType.Conflict);
+                return Result<CreateDoctorResponse>.Failure(["User with this phone number already exists."], ErrorType.Conflict);
             }
 
             var tempPasswaord = GenerateTemporaryPassword();
@@ -77,7 +77,7 @@ namespace Roshetta.API.Services
                     logger.LogWarning("Registration failed at user creation: {ErrorCodes}",
                         string.Join(", ", createResult.Errors.Select(e => e.Code)));
 
-                    return Result<DoctorCreateResponse>.Failure(
+                    return Result<CreateDoctorResponse>.Failure(
                         createResult.Errors.Select(e => e.Description),
                         isDuplicate ? ErrorType.Conflict : ErrorType.Validation);
                 }
@@ -86,7 +86,7 @@ namespace Roshetta.API.Services
                 if(!roleResult.Succeeded)
                 {
                     logger.LogError("Failed to add doctor to role.");
-                    return Result<DoctorCreateResponse>.Failure(["Failed to create doctor."], ErrorType.Unexpected);
+                    return Result<CreateDoctorResponse>.Failure(["Failed to create doctor."], ErrorType.Unexpected);
                 }
 
                 var doctor = new Doctor
@@ -100,7 +100,7 @@ namespace Roshetta.API.Services
                 await tx.CommitAsync();
 
                 logger.LogInformation("User {UserId} created successfully as {Role} by admin {AdminId}.", user.Id, Roles.Doctor, adminId);
-                return Result<DoctorCreateResponse>.Success(new DoctorCreateResponse
+                return Result<CreateDoctorResponse>.Success(new CreateDoctorResponse
                 {
                     Id = doctor.Id,
                     TempPassword = tempPasswaord,
@@ -112,7 +112,7 @@ namespace Roshetta.API.Services
             {
                 await tx.RollbackAsync();
                 logger.LogError(ex, "An error occurred while adding a new doctor.");
-                return Result<DoctorCreateResponse>.Failure(["An unexpected error occurred."], ErrorType.Unexpected);
+                return Result<CreateDoctorResponse>.Failure(["An unexpected error occurred."], ErrorType.Unexpected);
             }
 
         }
@@ -147,7 +147,7 @@ namespace Roshetta.API.Services
                 DateOfBirth = doctor.User.DateOfBirth,
                 Specialization = doctor.Specialization.Name,
                 Price = doctor.Price
-            };
+            });
         }
 
         private static string GenerateTemporaryPassword()
@@ -199,6 +199,101 @@ namespace Roshetta.API.Services
             {
                 // a booking was created between the check and the delete
                 return Result<string>.Failure(["Doctor has existing bookings."], ErrorType.Conflict);
+            }
+        }
+
+        public async Task<Result<DoctorDTO?>> UpdateDoctorAsync(Guid doctorId, UpdateDoctorDTO dto)
+        {
+            var email = dto.Email.Trim();
+
+            var doctor = await doctorRepository.GetByIdAsync(doctorId);
+            if (doctor is null)
+            {
+                logger.LogWarning("Doctor with ID {DoctorId} not found for update.", doctorId);
+                return Result<DoctorDTO?>.Failure(["Doctor not found."], ErrorType.NotFound);
+            }
+
+            var specialization = await specializationRepository.GetByIdAsync(dto.SpecializationId);
+            if (specialization is null)
+            {
+                logger.LogWarning("Specialization with ID {SpecializationId} does not exist.", dto.SpecializationId);
+                return Result<DoctorDTO?>.Failure(["Specialization does not exist."], ErrorType.Validation);
+            }
+
+            var other = await userManager.FindByEmailAsync(email);
+            if(other is not null && other.Id != doctor.UserId)
+            {
+                logger.LogWarning("Doctor update rejected: User with this email already exists.");
+                return Result<DoctorDTO?>.Failure(["User with this email already exists."], ErrorType.Conflict);
+            }
+
+            if(await userManager.Users.AnyAsync(u => u.PhoneNumber == dto.PhoneNumber && u.Id != doctor.UserId))
+            {
+                logger.LogWarning("Doctor update rejected: User with this phone number already exists.");
+                return Result<DoctorDTO?>.Failure(["User with this phone number already exists."], ErrorType.Conflict);
+            }
+
+            await using var tx = await context.Database.BeginTransactionAsync();
+            try
+            {
+                var user = doctor.User;
+                user.FirstName = dto.FirstName;
+                user.LastName = dto.LastName;
+                user.PhoneNumber = dto.PhoneNumber;
+                user.Gender = dto.Gender;
+                user.DateOfBirth = dto.DateOfBirth;
+
+                if(!string.Equals(user.Email, email, StringComparison.OrdinalIgnoreCase))
+                {
+                    var emailResult = await userManager.SetEmailAsync(user, email);
+                    var userNameResult = await userManager.SetUserNameAsync(user, email);
+
+                    if(!emailResult.Succeeded || !userNameResult.Succeeded)
+                    {
+                        logger.LogWarning("Failed to update email or username for doctor with ID {DoctorId}.", doctorId);
+                        return Result<DoctorDTO?>.Failure(["Failed to update email or username."], ErrorType.Unexpected);
+                    }
+                }
+
+                var updateResult = await userManager.UpdateAsync(user);
+                if(!updateResult.Succeeded)
+                {
+                    logger.LogWarning("Failed to update user details for doctor with ID {DoctorId}.", doctorId);
+                    return Result<DoctorDTO?>.Failure(updateResult.Errors.Select(e => e.Description), ErrorType.Unexpected);
+                }   
+
+                doctor.SpecializationId = dto.SpecializationId;
+                await doctorRepository.UpdateAsync(doctor);
+                await tx.CommitAsync();
+
+                logger.LogInformation("Doctor with ID {DoctorId} updated successfully.", doctorId);
+
+                return Result<DoctorDTO?>.Success(new DoctorDTO
+                {
+                    Id = doctor.Id,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Email = user.Email,
+                    PhoneNumber = user.PhoneNumber,
+                    Gender = user.Gender.ToString(),
+                    DateOfBirth = user.DateOfBirth,
+                    Specialization = specialization.Name,
+                    Price = doctor.Price
+                });
+
+
+            }
+            catch (DbUpdateException ex)
+            {
+                await tx.RollbackAsync();
+                logger.LogWarning(ex, "Doctor update conflicted with another change for {DoctorId}.", doctorId);
+                return Result<DoctorDTO?>.Failure(["Email or phone number is already in use."], ErrorType.Conflict);
+            }
+            catch (Exception ex)
+            {
+                await tx.RollbackAsync();
+                logger.LogError(ex, "An error occurred while updating doctor with ID {DoctorId}.", doctorId);
+                return Result<DoctorDTO?>.Failure(["An unexpected error occurred."], ErrorType.Unexpected);
             }
         }
     }

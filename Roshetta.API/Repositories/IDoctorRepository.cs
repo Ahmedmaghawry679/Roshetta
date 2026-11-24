@@ -9,9 +9,7 @@ namespace Roshetta.API.Repositories
         Task UpdateAsync(Doctor doctor);
         Task DeleteAsync(Guid id);
         Task<Doctor?> GetByIdAsync(Guid id);
-        Task<IEnumerable<Doctor>> GetAllAsync();
         Task<PagedList<DoctorDTO>> GetPagedAsync(DoctorQueryParameters parameters);
-        Task<IEnumerable<Doctor>> GetBySpecializationAsync(Guid specializationId);
         Task<bool> HasBookingsAsync(Guid doctorId);
 
     }

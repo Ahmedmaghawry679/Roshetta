@@ -26,7 +26,7 @@ namespace Roshetta.API.Controllers
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
-        [ProducesResponseType(typeof(DoctorCreateResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(CreateDoctorResponse), StatusCodes.Status200OK)]
         public async Task<IActionResult> AddDoctor([FromBody] RegisterDoctorDTO dto)
         {
             var result = await doctorService.AddDoctorAsync(dto, User.GetUserId());
@@ -65,6 +65,18 @@ namespace Roshetta.API.Controllers
         public async Task<IActionResult> DeleteDoctor(Guid id)
         {
             var result = await doctorService.DeleteDoctorAsync(id);
+            return result.ToActionResult();
+        }
+
+        [HttpPut("{id}")]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(CreateDoctorResponse), StatusCodes.Status200OK)]
+        public async Task<IActionResult> UpdateDoctor(Guid id, [FromBody] UpdateDoctorDTO dto)
+        {
+            var result = await doctorService.UpdateDoctorAsync(id, dto);
             return result.ToActionResult();
         }
     }

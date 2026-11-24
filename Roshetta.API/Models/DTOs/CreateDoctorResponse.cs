@@ -1,6 +1,6 @@
 ﻿namespace Roshetta.API.Models.DTOs
 {
-    public class DoctorCreateResponse
+    public class CreateDoctorResponse
     {
         public Guid Id { get; set; }
         public string Email { get; set; } = string.Empty;

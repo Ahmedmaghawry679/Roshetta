@@ -23,12 +23,6 @@ namespace Roshetta.API.Repositories
             }
         }
 
-        
-
-        public async Task<IEnumerable<Doctor>> GetAllAsync()
-        {
-            return await context.Doctors.ToListAsync();
-        }
 
         public async Task<Doctor?> GetByIdAsync(Guid id)
         {
@@ -36,11 +30,6 @@ namespace Roshetta.API.Repositories
                 .Include(d => d.User)
                 .Include(d => d.Specialization)
                 .FirstOrDefaultAsync(d => d.Id == id);
-        }
-
-        public async Task<IEnumerable<Doctor>> GetBySpecializationAsync(Guid specializationId)
-        {
-            return await context.Doctors.Where(d => d.SpecializationId == specializationId).ToListAsync();
         }
 
         public async Task UpdateAsync(Doctor doctor)
