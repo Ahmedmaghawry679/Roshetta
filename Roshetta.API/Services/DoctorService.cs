@@ -263,6 +263,7 @@ namespace Roshetta.API.Services
                 }   
 
                 doctor.SpecializationId = dto.SpecializationId;
+                doctor.Price = dto.Price;
                 await doctorRepository.UpdateAsync(doctor);
                 await tx.CommitAsync();
 

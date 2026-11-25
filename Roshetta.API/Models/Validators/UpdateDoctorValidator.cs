@@ -35,6 +35,11 @@ namespace Roshetta.API.Models.Validators
             RuleFor(x => x.SpecializationId)
                 .NotEmpty().WithMessage("Specialization is required.");
 
+            RuleFor(x => x.Price)
+                .NotEmpty().WithMessage("Price is required.")
+                .GreaterThan(0).WithMessage("Price must be greater than zero.")
+                .LessThan(1000).WithMessage("Price must be less than 1000.");
+
         }
     }
 }

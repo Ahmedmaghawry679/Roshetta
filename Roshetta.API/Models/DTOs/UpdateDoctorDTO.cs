@@ -9,5 +9,6 @@
         public Gender Gender { get; set; }
         public DateOnly DateOfBirth { get; set; }
         public Guid SpecializationId { get; set; }
+        public decimal Price { get; set; }
     }
 }

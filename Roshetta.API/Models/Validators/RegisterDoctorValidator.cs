@@ -3,9 +3,9 @@ using Roshetta.API.Models.DTOs;
 
 namespace Roshetta.API.Models.Validators
 {
-    public class DoctorValidator: AbstractValidator<RegisterDoctorDTO>
+    public class RegisterDoctorValidator: AbstractValidator<RegisterDoctorDTO>
     {
-        public DoctorValidator()
+        public RegisterDoctorValidator()
         {
             RuleFor(x => x.FirstName)
                 .NotEmpty().WithMessage("First name is required.")
